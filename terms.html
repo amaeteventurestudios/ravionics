@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Use — Ravionics</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black:   #07090D;
+  --steel:   #0F1219;
+  --card:    #111520;
+  --rule:    #1C2233;
+  --muted:   #3D4A60;
+  --body:    #8A9AB8;
+  --white:   #EFF0F0;
+  --accent:  #C8922A;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  line-height: 1.7;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 48px;
+  background: rgba(7,9,13,0.95);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--rule);
+}
+.nav-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: var(--white);
+  text-decoration: none;
+}
+.nav-logo span { color: var(--accent); }
+.nav-back {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--body);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-back:hover { color: var(--accent); }
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 140px 24px 80px;
+}
+.page-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.page-label::before, .page-label::after {
+  content: '';
+  display: block;
+  width: 32px; height: 1px;
+  background: var(--accent);
+}
+h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(44px, 6vw, 72px);
+  letter-spacing: 0.02em;
+  line-height: 0.92;
+  margin-bottom: 16px;
+}
+.effective {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 48px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--rule);
+}
+h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: 0.05em;
+  color: var(--white);
+  margin: 40px 0 12px;
+}
+p {
+  color: var(--body);
+  font-size: 15px;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+ul {
+  color: var(--body);
+  font-size: 15px;
+  line-height: 1.8;
+  margin-bottom: 16px;
+  padding-left: 20px;
+}
+ul li { margin-bottom: 6px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+footer {
+  border-top: 1px solid var(--rule);
+  padding: 32px 24px;
+  text-align: center;
+}
+.footer-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+.footer-logo span { color: var(--accent); }
+.footer-copy {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.footer-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--accent); }
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  main { padding: 110px 20px 60px; }
+}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo">RAVI<span>ONICS</span></a>
+  <a href="/" class="nav-back">← Back</a>
+</nav>
+
+<main>
+  <div class="page-label">Legal</div>
+  <h1>Terms<br>of Use</h1>
+  <div class="effective">Effective Date: April 2026</div>
+
+  <h2>Acceptance of Terms</h2>
+  <p>By accessing or using the Ravionics.com website ("Site"), you agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use the Site.</p>
+
+  <h2>About Ravionics</h2>
+  <p>Ravionics is a program of Umanah Systems Group. The Site is an informational and partnership engagement platform. Nothing on this Site constitutes a binding commercial offer, investment solicitation, or legal agreement unless executed in a separate written instrument signed by authorized representatives of Ravionics.</p>
+
+  <h2>Permitted Use</h2>
+  <p>You may access and use this Site for lawful, informational purposes only. You agree not to:</p>
+  <ul>
+    <li>Reproduce, distribute, or commercially exploit any content from this Site without written permission</li>
+    <li>Attempt to reverse engineer, scrape, or systematically extract content from this Site</li>
+    <li>Use the Site in any way that could damage, disable, or impair its functionality</li>
+    <li>Submit false, misleading, or fraudulent information through any contact form</li>
+    <li>Use the Site for any unlawful purpose or in violation of applicable regulations</li>
+  </ul>
+
+  <h2>Intellectual Property</h2>
+  <p>All content on this Site — including text, graphics, imagery, brand identity, and technology descriptions — is the property of Ravionics and Umanah Systems Group, and is protected by applicable intellectual property laws. The Ravionics name, logo, and program designations are proprietary marks. Unauthorized use is strictly prohibited.</p>
+
+  <h2>No Investment Solicitation</h2>
+  <p>Nothing on this Site constitutes an offer to sell, or a solicitation of an offer to buy, any securities or financial instruments. Any investment interest must be pursued through direct, formal engagement with authorized Ravionics representatives.</p>
+
+  <h2>Disclaimer of Warranties</h2>
+  <p>This Site is provided on an "as is" and "as available" basis without warranties of any kind, express or implied. Ravionics makes no representations about the accuracy, completeness, or suitability of information presented on this Site for any purpose.</p>
+
+  <h2>Limitation of Liability</h2>
+  <p>To the fullest extent permitted by law, Ravionics and Umanah Systems Group shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of, or inability to use, this Site or its content.</p>
+
+  <h2>External Links</h2>
+  <p>This Site may contain links to third-party websites. These links are provided for convenience only. Ravionics does not endorse, and is not responsible for, the content or practices of any linked third-party site.</p>
+
+  <h2>Governing Law</h2>
+  <p>These Terms of Use are governed by and construed in accordance with the laws of the United States and the applicable laws of the state in which Umanah Systems Group is incorporated, without regard to conflict of law principles.</p>
+
+  <h2>Changes to These Terms</h2>
+  <p>We reserve the right to update these Terms at any time. Changes will be effective upon posting to this page with a revised effective date. Continued use of the Site after changes constitutes acceptance of the updated Terms.</p>
+
+  <h2>Contact</h2>
+  <p>Questions regarding these Terms may be directed to Ravionics via the contact form at <a href="/#contact">Ravionics.com</a>.</p>
+</main>
+
+<footer>
+  <div class="footer-logo">RAVI<span>ONICS</span></div>
+  <div class="footer-links">
+    <a href="/privacy.html">Privacy Policy</a>
+    <span>·</span>
+    <a href="/terms.html">Terms of Use</a>
+  </div>
+  <div class="footer-copy">© Ravionics. All rights reserved.</div>
+</footer>
+</body>
+</html>
