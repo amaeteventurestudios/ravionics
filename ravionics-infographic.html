@@ -121,8 +121,9 @@
   .dropdown-menu {
     position: absolute;
     top: calc(100% + 14px);
-    left: 0;
-    min-width: 210px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 260px;
     background: #07090D;
     border: 1px solid rgba(138,154,184,0.15);
     border-top: 2px solid #C8922A;
@@ -140,6 +141,7 @@
     display: block;
     padding: 12px 20px;
     color: #8A9AB8;
+    text-align: center;
     white-space: nowrap;
   }
   .dropdown-menu a:hover { color: #C8922A; }
