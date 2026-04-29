@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ravionics: Operational Cost Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C8922A;
+    --ice: #1A8FD1;
+    --bg: #07090D;
+    --surface: #0D1117;
+    --surface2: #111820;
+    --body: #8A9AB8;
+    --white: #E8EDF5;
+    --danger: #C84A2A;
+    --border: rgba(138,154,184,0.15);
+    --gold-faint: rgba(200,146,42,0.08);
+    --green: #2AB87A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes glow-pulse {
+    0%,100% { box-shadow: 0 0 6px rgba(200,146,42,0.15); }
+    50%      { box-shadow: 0 0 24px rgba(200,146,42,0.45), 0 0 48px rgba(200,146,42,0.1); }
+  }
+  @keyframes scanline {
+    0%   { top: -2px; }
+    100% { top: 100%; }
+  }
+  @keyframes number-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 0 80px; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(180deg, #080d18 0%, #07090D 100%);
+    text-align: center;
+    padding: 52px 40px 36px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 100% 80% at 50% -10%, rgba(26,143,209,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .scanline {
+    position: absolute; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(26,143,209,0.4), transparent);
+    animation: scanline 7s linear infinite;
+    pointer-events: none;
+  }
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.24em;
+    color: var(--ice); text-transform: uppercase;
+    margin-bottom: 14px;
+    opacity: 0; animation: fadeUp 0.5s ease 0.1s forwards;
+  }
+  .eyebrow::before { content: '▶ '; color: var(--gold); font-size: 8px; }
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 4.5vw, 54px);
+    letter-spacing: 0.04em; line-height: 1.0;
+    color: var(--white); margin-bottom: 8px;
+    opacity: 0; animation: fadeUp 0.5s ease 0.22s forwards;
+  }
+  .header h1 span { color: var(--gold); }
+  .header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(16px, 2.5vw, 28px);
+    letter-spacing: 0.07em; color: var(--gold);
+    margin-bottom: 14px;
+    opacity: 0; animation: fadeUp 0.5s ease 0.36s forwards;
+    text-shadow: 0 0 20px rgba(200,146,42,0.28);
+  }
+  .header-sub {
+    font-size: 12px; color: var(--body);
+    max-width: 680px; margin: 0 auto;
+    line-height: 1.7; text-transform: uppercase; letter-spacing: 0.055em;
+    opacity: 0; animation: fadeUp 0.5s ease 0.48s forwards;
+  }
+
+  /* NASA STACK BADGE */
+  .nasa-stack {
+    margin: 28px 40px 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .nasa-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--ice);
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .nasa-card::before {
+    content: '';
+    position: absolute; top: 0; right: 0;
+    width: 60px; height: 60px;
+    background: radial-gradient(circle at top right, rgba(26,143,209,0.06), transparent 70%);
+  }
+  .nasa-layer {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 0.16em;
+    color: var(--ice); text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .nasa-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px; letter-spacing: 0.07em;
+    color: var(--white); margin-bottom: 4px;
+  }
+  .nasa-desc { font-size: 11px; color: var(--body); line-height: 1.5; }
+  .nasa-status {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 0.08em;
+    padding: 3px 8px;
+    background: rgba(42,184,122,0.12);
+    border: 1px solid rgba(42,184,122,0.3);
+    color: var(--green);
+  }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    background: rgba(200,146,42,0.05);
+    border: 1px solid rgba(200,146,42,0.2);
+    border-left: 3px solid var(--gold);
+    padding: 14px 20px;
+    margin: 24px 40px 0;
+    font-size: 11px; color: var(--body); line-height: 1.6;
+  }
+  .disclaimer strong { color: var(--gold); }
+
+  /* SLIDERS PANEL */
+  .sliders-panel {
+    margin: 28px 40px 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--gold);
+    padding: 32px;
+    position: relative; overflow: hidden;
+  }
+  .sliders-panel::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(200,146,42,0.04), transparent 60%);
+    pointer-events: none;
+  }
+  .sliders-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 8px;
+  }
+  .sliders-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 0.1em; color: var(--white);
+  }
+  .sliders-title span { color: var(--gold); }
+  .sliders-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 0.1em; color: var(--body); text-transform: uppercase;
+  }
+
+  /* SLIDER GRID: 3 columns */
+  .slider-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px 32px;
+  }
+
+  .slider-item { position: relative; }
+  .slider-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .slider-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 0.1em;
+    color: var(--body); text-transform: uppercase;
+  }
+  .slider-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; line-height: 1;
+    color: var(--gold);
+    text-shadow: 0 0 16px rgba(200,146,42,0.3);
+    transition: all 0.2s;
+  }
+  .slider-val.popping { animation: number-pop 0.3s ease; }
+
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px;
+    background: linear-gradient(90deg, var(--gold) var(--pct, 50%), rgba(138,154,184,0.18) var(--pct, 50%));
+    border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 8px rgba(200,146,42,0.5);
+    cursor: pointer; transition: box-shadow 0.2s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 0 16px rgba(200,146,42,0.8); }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--gold); border: 2px solid var(--bg); cursor: pointer;
+  }
+  .slider-range-labels {
+    display: flex; justify-content: space-between;
+    margin-top: 5px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; color: rgba(138,154,184,0.38);
+  }
+
+  /* AUTONOMY SELECTOR */
+  .autonomy-item { grid-column: span 3; }
+  .autonomy-label-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 12px;
+  }
+  .autonomy-options {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .auto-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .auto-btn:hover { border-color: rgba(200,146,42,0.4); }
+  .auto-btn.active {
+    border-color: var(--gold);
+    background: rgba(200,146,42,0.07);
+  }
+  .auto-btn.active::before {
+    content: '✓';
+    position: absolute; top: 8px; right: 10px;
+    color: var(--gold); font-size: 11px;
+  }
+  .auto-btn-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px; letter-spacing: 0.08em;
+    color: var(--white); margin-bottom: 4px;
+  }
+  .auto-btn.active .auto-btn-title { color: var(--gold); }
+  .auto-btn-crew {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--ice); margin-bottom: 4px;
+  }
+  .auto-btn-desc { font-size: 11px; color: var(--body); line-height: 1.5; }
+  .auto-btn-req {
+    font-size: 10px; color: rgba(138,154,184,0.5);
+    margin-top: 6px; font-style: italic;
+  }
+
+  /* RESULTS GRID */
+  .results-section { margin: 28px 40px 0; }
+  .results-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 0.1em; color: var(--white);
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .results-title::after {
+    content: ''; position: absolute;
+    bottom: -1px; left: 0; width: 56px; height: 2px;
+    background: var(--gold);
+  }
+  .results-title span { color: var(--gold); }
+
+  /* BIG NUMBER ROW */
+  .big-numbers {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .big-num-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--gold);
+    padding: 20px 16px;
+    text-align: center;
+    position: relative; overflow: hidden;
+    transition: box-shadow 0.3s;
+  }
+  .big-num-card:hover { box-shadow: 0 0 20px rgba(200,146,42,0.15); }
+  .big-num-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(200,146,42,0.04), transparent 60%);
+    pointer-events: none;
+  }
+  .big-num-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 0.14em;
+    color: var(--body); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .big-num-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px; line-height: 1;
+    color: var(--gold);
+    text-shadow: 0 0 24px rgba(200,146,42,0.3);
+  }
+  .big-num-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--body);
+    margin-top: 4px; letter-spacing: 0.05em;
+  }
+
+  /* COMPARISON BARS */
+  .bars-section { margin-bottom: 20px; }
+  .bar-group { margin-bottom: 22px; }
+  .bar-label-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 7px;
+  }
+  .bar-sys {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px; letter-spacing: 0.08em;
+  }
+  .bar-sys.gold { color: var(--gold); }
+  .bar-sys.red  { color: #E07050; }
+  .bar-sys.ice  { color: var(--ice); }
+  .bar-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; color: var(--white);
+  }
+  .bar-track {
+    height: 32px;
+    background: rgba(138,154,184,0.07);
+    border: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    min-width: 3px;
+  }
+  .bar-fill.gold { background: linear-gradient(90deg, rgba(200,146,42,0.55), rgba(200,146,42,0.88)); }
+  .bar-fill.red  { background: linear-gradient(90deg, rgba(200,74,42,0.45),  rgba(200,74,42,0.78)); }
+  .bar-fill.ice  { background: linear-gradient(90deg, rgba(26,143,209,0.45), rgba(26,143,209,0.78)); }
+  .bar-detail { font-size: 11px; color: var(--body); margin-top: 4px; font-style: italic; }
+
+  /* DETAILED BREAKDOWN */
+  .breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .breakdown-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 20px;
+    position: relative; overflow: hidden;
+  }
+  .breakdown-card.ravionics { border-top: 2px solid var(--gold); }
+  .breakdown-card.mq9       { border-top: 2px solid var(--danger); }
+  .breakdown-card.tower     { border-top: 2px solid var(--ice); }
+  .breakdown-sys {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .breakdown-sys.gold { color: var(--gold); }
+  .breakdown-sys.red  { color: var(--danger); }
+  .breakdown-sys.ice  { color: var(--ice); }
+  .breakdown-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 17px; letter-spacing: 0.07em;
+    color: var(--white); margin-bottom: 16px;
+  }
+  .brow {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 7px 0; border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .brow:last-child { border-bottom: none; }
+  .brow-label { color: var(--body); }
+  .brow-val { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--white); }
+  .brow-val.gold { color: var(--gold); }
+  .brow-val.red  { color: #E07050; }
+  .brow-val.ice  { color: var(--ice); }
+  .brow-val.green { color: var(--green); }
+
+  /* VERDICT */
+  .verdict {
+    background: var(--surface2);
+    border: 1px solid rgba(200,146,42,0.25);
+    border-top: 2px solid var(--gold);
+    padding: 28px 32px;
+    position: relative; overflow: hidden;
+    margin-bottom: 20px;
+    animation: glow-pulse 4s ease-in-out infinite;
+  }
+  .verdict::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(200,146,42,0.05), transparent 60%);
+    pointer-events: none;
+  }
+  .verdict-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 0.1em; color: var(--white);
+    margin-bottom: 16px; position: relative;
+  }
+  .verdict-title span { color: var(--gold); }
+  .verdict-stats {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 12px;
+    margin-bottom: 16px; position: relative;
+  }
+  .vs { background: var(--bg); border: 1px solid var(--border); padding: 16px 14px; text-align: center; }
+  .vs-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: var(--body); text-transform: uppercase; margin-bottom: 6px; }
+  .vs-val { font-family: 'Bebas Neue', sans-serif; font-size: 36px; line-height: 1; color: var(--gold); text-shadow: 0 0 20px rgba(200,146,42,0.28); }
+  .vs-unit { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--body); margin-top: 3px; }
+  .verdict-callout {
+    background: rgba(200,146,42,0.06);
+    border: 1px solid rgba(200,146,42,0.2);
+    padding: 16px 22px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 17px; letter-spacing: 0.07em;
+    color: var(--gold); text-align: center;
+    text-shadow: 0 0 14px rgba(200,146,42,0.22);
+    position: relative; line-height: 1.4;
+  }
+  .verdict-callout::before { content: '▮ '; font-size: 8px; opacity: 0.45; }
+  .verdict-callout::after  { content: ' ▮'; font-size: 8px; opacity: 0.45; }
+
+  /* AUTONOMY NOTE */
+  .auto-note {
+    background: rgba(26,143,209,0.05);
+    border: 1px solid rgba(26,143,209,0.2);
+    border-left: 3px solid var(--ice);
+    padding: 14px 20px;
+    font-size: 12px; color: var(--body); line-height: 1.7;
+    margin-bottom: 20px;
+  }
+  .auto-note strong { color: var(--ice); }
+
+  /* ASSUMPTIONS TABLE */
+  .assump-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 0.1em; color: var(--white);
+    margin-bottom: 14px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .assump-title::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 56px; height: 2px; background: var(--gold); }
+  .assump-title span { color: var(--gold); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--body); padding: 10px 14px;
+    text-align: left; background: var(--surface2);
+    border-bottom: 1px solid var(--gold);
+  }
+  td {
+    padding: 11px 14px; border-bottom: 1px solid var(--border);
+    color: var(--body); line-height: 1.6; vertical-align: top;
+  }
+  td:first-child { color: var(--white); font-weight: 500; }
+  td.gold { color: var(--gold); font-family: 'DM Mono', monospace; }
+  td.red  { color: #E07050;    font-family: 'DM Mono', monospace; }
+  td.ice  { color: var(--ice); font-family: 'DM Mono', monospace; }
+
+  /* FOOTER */
+  .footer {
+    margin: 40px 40px 0;
+    padding: 22px 0 0;
+    border-top: 1px solid rgba(200,146,42,0.22);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-left { font-size: 11px; color: rgba(138,154,184,0.42); font-style: italic; line-height: 1.6; }
+  .footer-brand { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.18em; color: var(--white); text-align: right; }
+  .footer-brand span { display: block; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.2em; color: var(--gold); margin-top: 2px; }
+
+  @media (max-width: 900px) {
+    .nasa-stack, .slider-grid, .big-numbers, .breakdown-grid, .verdict-stats { grid-template-columns: 1fr; }
+    .autonomy-options { grid-template-columns: 1fr; }
+    .autonomy-item { grid-column: span 1; }
+    .nasa-stack, .disclaimer, .sliders-panel, .results-section, .footer { margin-left: 20px; margin-right: 20px; }
+    .header { padding: 32px 20px 28px; }
+    .footer { flex-direction: column; gap: 16px; text-align: center; }
+    .footer-brand { text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="scanline"></div>
+  <div class="eyebrow">Operational Cost Model &nbsp;·&nbsp; Ravionics / USG</div>
+  <h1>COST PER <span>SQUARE MILE OF COVERAGE</span></h1>
+  <h2>The Metric That Changes the Conversation</h2>
+  <p class="header-sub">Hourly cost alone does not tell the story. Adjust the variables below. All numbers update in real time. Every assumption is sourced and transparent.</p>
+</div>
+
+<!-- NASA STACK -->
+<div class="nasa-stack">
+  <div class="nasa-card">
+    <div class="nasa-layer">Layer 1 &nbsp;·&nbsp; Airframe</div>
+    <div class="nasa-name">GL-10 Greased Lightning</div>
+    <div class="nasa-desc">Hybrid diesel-electric tilt-wing VTOL. 24-hour endurance design target. Zero runway. Distributed electric propulsion.</div>
+    <div class="nasa-status">NASA Langley &nbsp;·&nbsp; Patent 9,475,579</div>
+  </div>
+  <div class="nasa-card">
+    <div class="nasa-layer">Layer 2 &nbsp;·&nbsp; Geo-Containment</div>
+    <div class="nasa-name">Safeguard</div>
+    <div class="nasa-desc">Formally verified geo-limitation algorithm. Mathematically guaranteed boundary enforcement independent of the autopilot. Unlocks BVLOS regulatory pathway.</div>
+    <div class="nasa-status">NASA Langley &nbsp;·&nbsp; LAR-TOPS-244</div>
+  </div>
+  <div class="nasa-card">
+    <div class="nasa-layer">Layer 3 &nbsp;·&nbsp; Compliance &amp; Audit</div>
+    <div class="nasa-name">xTM V&amp;V</div>
+    <div class="nasa-desc">Near-real time verification and validation of autonomous flight operations. FAA-aligned. Flight-tested across thousands of operations at NASA Ames.</div>
+    <div class="nasa-status">NASA Ames &nbsp;·&nbsp; TOP2-320</div>
+  </div>
+</div>
+
+<!-- DISCLAIMER -->
+<div class="disclaimer">
+  <strong>Transparency:</strong> MQ-9 cost ($12,000/hr) sourced from DHS OIG and CBO. Anduril figures derived from public contract data. <strong>Ravionics cost per hour, patrol speed, swath, and crew assumptions are planning variables only.</strong> The full-scale GL-10 has not been built. All Ravionics figures require prototype validation. This model is a strategic planning tool, not a procurement claim or cost guarantee.
+</div>
+
+<!-- SLIDERS PANEL -->
+<div class="sliders-panel">
+  <div class="sliders-header">
+    <div class="sliders-title">Adjust the <span>Variables</span></div>
+    <div class="sliders-hint">All outputs update in real time</div>
+  </div>
+  <div class="slider-grid">
+
+    <!-- Slider 1: Cost per hour -->
+    <div class="slider-item">
+      <div class="slider-top">
+        <div class="slider-label">Cost per flight hour (assumed)</div>
+        <div class="slider-val" id="disp-cph">$3,000</div>
+      </div>
+      <input type="range" id="sl-cph" min="500" max="8000" value="3000" step="100">
+      <div class="slider-range-labels"><span>$500 optimistic</span><span>$8,000 conservative</span></div>
+    </div>
+
+    <!-- Slider 2: Units deployed -->
+    <div class="slider-item">
+      <div class="slider-top">
+        <div class="slider-label">Units deployed</div>
+        <div class="slider-val" id="disp-units">1 unit</div>
+      </div>
+      <input type="range" id="sl-units" min="1" max="10" value="1" step="1">
+      <div class="slider-range-labels"><span>1 unit</span><span>10 units</span></div>
+    </div>
+
+    <!-- Slider 3: Sorties per month -->
+    <div class="slider-item">
+      <div class="slider-top">
+        <div class="slider-label">Sorties per month (per unit)</div>
+        <div class="slider-val" id="disp-sorties">15 / mo</div>
+      </div>
+      <input type="range" id="sl-sorties" min="1" max="30" value="15" step="1">
+      <div class="slider-range-labels"><span>1/mo</span><span>30/mo</span></div>
+    </div>
+
+    <!-- Slider 4: Patrol speed -->
+    <div class="slider-item">
+      <div class="slider-top">
+        <div class="slider-label">Cruise patrol speed (mph)</div>
+        <div class="slider-val" id="disp-speed">60 mph</div>
+      </div>
+      <input type="range" id="sl-speed" min="40" max="120" value="60" step="5">
+      <div class="slider-range-labels"><span>40 mph</span><span>120 mph (GL-10 design)</span></div>
+    </div>
+
+    <!-- Slider 5: Sensor swath -->
+    <div class="slider-item">
+      <div class="slider-top">
+        <div class="slider-label">Sensor swath width (miles)</div>
+        <div class="slider-val" id="disp-swath">2.0 mi</div>
+      </div>
+      <input type="range" id="sl-swath" min="0.5" max="5" value="2" step="0.5">
+      <div class="slider-range-labels"><span>0.5 mi</span><span>5 mi</span></div>
+    </div>
+
+    <!-- Slider 6: Crew labor cost -->
+    <div class="slider-item">
+      <div class="slider-top">
+        <div class="slider-label">Fully-loaded labor cost / person / yr</div>
+        <div class="slider-val" id="disp-labor">$100K</div>
+      </div>
+      <input type="range" id="sl-labor" min="60000" max="180000" value="100000" step="5000">
+      <div class="slider-range-labels"><span>$60K</span><span>$180K (cleared operator)</span></div>
+    </div>
+
+    <!-- Autonomy selector -->
+    <div class="slider-item autonomy-item">
+      <div class="autonomy-label-row">
+        <div class="slider-label">Autonomy level &nbsp;·&nbsp; determines crew per aircraft and regulatory pathway</div>
+        <div class="slider-val" id="disp-crew" style="font-size:18px;">6 crew / aircraft</div>
+      </div>
+      <div class="autonomy-options">
+
+        <button class="auto-btn" data-level="manual" onclick="setAuto('manual')">
+          <div class="auto-btn-title">Manual Operations</div>
+          <div class="auto-btn-crew">6 crew per aircraft (2 shifts)</div>
+          <div class="auto-btn-desc">One pilot and one payload operator per shift. One crew chief. Full 24-hour sustained ops requires two shift rotations.</div>
+          <div class="auto-btn-req">No additional FAA approval required beyond existing CBP UAS waivers.</div>
+        </button>
+
+        <button class="auto-btn active" data-level="semi" onclick="setAuto('semi')">
+          <div class="auto-btn-title">Semi-Autonomous (Safeguard)</div>
+          <div class="auto-btn-crew">4 crew per aircraft (2 shifts)</div>
+          <div class="auto-btn-desc">AI handles navigation and geo-containment via Safeguard. One operator monitors 2 aircraft simultaneously. Crew chief shared across units.</div>
+          <div class="auto-btn-req">Requires BVLOS waiver. Safeguard geo-containment supports FAA compliance case.</div>
+        </button>
+
+        <button class="auto-btn" data-level="full" onclick="setAuto('full')">
+          <div class="auto-btn-title">Full Autonomous Patrol</div>
+          <div class="auto-btn-crew">3 crew per aircraft (2 shifts)</div>
+          <div class="auto-btn-desc">Safeguard + xTM V&V provide containment and real-time compliance audit. One operator manages up to 4 aircraft. Crew per aircraft effectively 3 for sustained ops.</div>
+          <div class="auto-btn-req">Requires BVLOS approval and proven AI detection stack. Program maturity milestone.</div>
+        </button>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="results-section">
+  <div class="results-title">Live Results: <span>Your Configuration</span></div>
+
+  <!-- BIG NUMBERS -->
+  <div class="big-numbers">
+    <div class="big-num-card">
+      <div class="big-num-label">Total fleet coverage / 24 hrs</div>
+      <div class="big-num-val" id="bn-coverage">2,880</div>
+      <div class="big-num-unit">sq mi per day</div>
+    </div>
+    <div class="big-num-card">
+      <div class="big-num-label">Cost per sq mi (flight only)</div>
+      <div class="big-num-val" id="bn-cpsm">$25</div>
+      <div class="big-num-unit">vs. MQ-9 at $1,440</div>
+    </div>
+    <div class="big-num-card">
+      <div class="big-num-label">Total monthly mission cost</div>
+      <div class="big-num-val" id="bn-monthly">$1.1M</div>
+      <div class="big-num-unit">flight + crew (all units)</div>
+    </div>
+    <div class="big-num-card">
+      <div class="big-num-label">Coverage advantage vs. MQ-9</div>
+      <div class="big-num-val" id="bn-ratio">58x</div>
+      <div class="big-num-unit">more sq mi per dollar</div>
+    </div>
+  </div>
+
+  <!-- BARS -->
+  <div class="bars-section">
+    <div class="bar-group">
+      <div class="bar-label-row">
+        <span class="bar-sys red">MQ-9 Predator B (CBP)</span>
+        <span class="bar-val">$1,440 / sq mi &nbsp;·&nbsp; $288,000 / sortie</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill red" style="width:100%"></div></div>
+      <div class="bar-detail">Fixed baseline. $12,000/hr all-in. ~200 sq mi corridor per 24-hr sortie. Runway required. Crew of 5–8. Source: DHS OIG / CBO.</div>
+    </div>
+    <div class="bar-group">
+      <div class="bar-label-row">
+        <span class="bar-sys ice">Anduril AST (annualized estimate)</span>
+        <span class="bar-val">~$77–$193 / sq mi / day</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill ice" style="width:13%"></div></div>
+      <div class="bar-detail">Fixed 7.1 sq mi per tower. Low daily operating cost. Cannot reposition. 300 towers = 30% of southern border. Source: Anduril contract data, public.</div>
+    </div>
+    <div class="bar-group">
+      <div class="bar-label-row">
+        <span class="bar-sys gold">Ravionics Fleet (your configuration)</span>
+        <span class="bar-val" id="bar-rv-label">$25 / sq mi</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill gold" id="bar-rv" style="width:2%"></div></div>
+      <div class="bar-detail" id="bar-rv-detail">Based on current slider settings. Cost model to be validated at prototype stage.</div>
+    </div>
+  </div>
+
+  <!-- BREAKDOWN CARDS -->
+  <div class="breakdown-grid">
+
+    <div class="breakdown-card ravionics">
+      <div class="breakdown-sys gold">Ravionics Fleet</div>
+      <div class="breakdown-name" id="rv-fleet-name">1 Unit &nbsp;·&nbsp; Semi-Autonomous</div>
+      <div class="brow"><span class="brow-label">Cost per flight hour</span><span class="brow-val gold" id="rv-cph">$3,000</span></div>
+      <div class="brow"><span class="brow-label">24-hr flight cost (per unit)</span><span class="brow-val gold" id="rv-24h">$72,000</span></div>
+      <div class="brow"><span class="brow-label">Coverage per unit / 24 hrs</span><span class="brow-val gold" id="rv-cov-unit">2,880 sq mi</span></div>
+      <div class="brow"><span class="brow-label">Total fleet coverage / day</span><span class="brow-val gold" id="rv-cov-fleet">2,880 sq mi</span></div>
+      <div class="brow"><span class="brow-label">Crew per aircraft</span><span class="brow-val gold" id="rv-crew">4 people</span></div>
+      <div class="brow"><span class="brow-label">Annual crew cost (per unit)</span><span class="brow-val gold" id="rv-crew-cost">$400,000</span></div>
+      <div class="brow"><span class="brow-label">Monthly flight cost (fleet)</span><span class="brow-val gold" id="rv-monthly-flight">$1,080,000</span></div>
+      <div class="brow"><span class="brow-label">Monthly crew cost (fleet)</span><span class="brow-val gold" id="rv-monthly-crew">$33,333</span></div>
+      <div class="brow"><span class="brow-label">Total monthly cost (fleet)</span><span class="brow-val gold" id="rv-monthly-total">$1,113,333</span></div>
+      <div class="brow"><span class="brow-label">Cost per sq mi (flight only)</span><span class="brow-val gold" id="rv-cpsm">$25.00</span></div>
+    </div>
+
+    <div class="breakdown-card mq9">
+      <div class="breakdown-sys red">MQ-9 Predator B</div>
+      <div class="breakdown-name">CBP Large UAS &nbsp;·&nbsp; Fixed Baseline</div>
+      <div class="brow"><span class="brow-label">Cost per flight hour (all-in)</span><span class="brow-val red">$12,000</span></div>
+      <div class="brow"><span class="brow-label">24-hr mission cost</span><span class="brow-val red">$288,000</span></div>
+      <div class="brow"><span class="brow-label">Coverage per sortie</span><span class="brow-val red">~200 sq mi</span></div>
+      <div class="brow"><span class="brow-label">Cost per sq mi</span><span class="brow-val red">$1,440</span></div>
+      <div class="brow"><span class="brow-label">Runway required</span><span class="brow-val red">Yes</span></div>
+      <div class="brow"><span class="brow-label">Ground crew</span><span class="brow-val red">5–8 people</span></div>
+      <div class="brow"><span class="brow-label">Monthly cost (15 sorties)</span><span class="brow-val red">$4,320,000</span></div>
+      <div class="brow"><span class="brow-label">Aircraft in CBP inventory</span><span class="brow-val red">9 total</span></div>
+      <div class="brow"><span class="brow-label">Coverage advantage</span><span class="brow-val red">—</span></div>
+      <div class="brow"><span class="brow-label">Cost advantage vs. Ravionics</span><span class="brow-val red" id="mq9-disadvantage">$1,440 vs. $25/sq mi</span></div>
+    </div>
+
+    <div class="breakdown-card tower">
+      <div class="breakdown-sys ice">Anduril AST Tower</div>
+      <div class="breakdown-name">Fixed Node &nbsp;·&nbsp; Annualized Estimate</div>
+      <div class="brow"><span class="brow-label">Est. capital cost per tower</span><span class="brow-val ice">$200K–$500K</span></div>
+      <div class="brow"><span class="brow-label">Est. annualized cost / day</span><span class="brow-val ice">~$550–$1,370</span></div>
+      <div class="brow"><span class="brow-label">Coverage per tower</span><span class="brow-val ice">7.1 sq mi (fixed)</span></div>
+      <div class="brow"><span class="brow-label">Est. cost per sq mi / day</span><span class="brow-val ice">$77–$193</span></div>
+      <div class="brow"><span class="brow-label">Mobile</span><span class="brow-val ice">No</span></div>
+      <div class="brow"><span class="brow-label">Terrain flexible</span><span class="brow-val ice">Limited</span></div>
+      <div class="brow"><span class="brow-label">Towers deployed (CBP)</span><span class="brow-val ice">300+</span></div>
+      <div class="brow"><span class="brow-label">Border coverage</span><span class="brow-val ice">~30%</span></div>
+      <div class="brow"><span class="brow-label">Aerostat replacement</span><span class="brow-val ice">Partial</span></div>
+      <div class="brow"><span class="brow-label">Note</span><span class="brow-val ice" style="font-size:10px;">Complementary to Ravionics. Not a direct competitor.</span></div>
+    </div>
+
+  </div>
+
+  <!-- AUTONOMY NOTE -->
+  <div class="auto-note" id="auto-note">
+    <strong>Semi-Autonomous mode (Safeguard active):</strong> AI handles navigation and geo-containment. One operator monitors 2 aircraft simultaneously. Crew reduced from 6 to 4 per aircraft. Requires BVLOS waiver. Safeguard's formally verified boundary enforcement provides the FAA compliance foundation for that application. Software implementation of Safeguard to be built or procured separately.
+  </div>
+
+  <!-- VERDICT -->
+  <div class="verdict">
+    <div class="verdict-title">The <span>Bottom Line</span> at This Configuration</div>
+    <div class="verdict-stats">
+      <div class="vs">
+        <div class="vs-label">Coverage advantage vs. MQ-9</div>
+        <div class="vs-val" id="v-ratio">58x</div>
+        <div class="vs-unit">more sq mi per dollar</div>
+      </div>
+      <div class="vs">
+        <div class="vs-label">Monthly saving vs. MQ-9 (same sorties)</div>
+        <div class="vs-val" id="v-saving">$3.2M</div>
+        <div class="vs-unit">per month (flight cost only)</div>
+      </div>
+      <div class="vs">
+        <div class="vs-label">Total fleet coverage / month</div>
+        <div class="vs-val" id="v-monthly-cov">43,200</div>
+        <div class="vs-unit">sq mi per month</div>
+      </div>
+      <div class="vs">
+        <div class="vs-label">Annual crew cost (full fleet)</div>
+        <div class="vs-val" id="v-annual-crew">$400K</div>
+        <div class="vs-unit">fully loaded labor</div>
+      </div>
+    </div>
+    <div class="verdict-callout" id="v-callout">
+      1 unit at $3,000/hr covers 2,880 sq mi per day for $72,000. The MQ-9 covers ~200 sq mi for $288,000.
+    </div>
+  </div>
+
+  <!-- ASSUMPTIONS TABLE -->
+  <div class="assump-title">Model <span>Assumptions and Sources</span></div>
+  <table>
+    <thead>
+      <tr><th>Assumption</th><th>Value</th><th>Basis</th><th>Confidence</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>MQ-9 all-in cost / hr</td>
+        <td class="red">$12,000</td>
+        <td>DHS Inspector General; CBO. Includes pilots, crew, maintenance, overhead.</td>
+        <td>High. Multiple federal audits.</td>
+      </tr>
+      <tr>
+        <td>MQ-9 coverage per 24-hr sortie</td>
+        <td class="red">~200 sq mi</td>
+        <td>CBP operational reporting; DHS OIG 2015 audit.</td>
+        <td>High. OIG confirmed.</td>
+      </tr>
+      <tr>
+        <td>Ravionics cruise speed range</td>
+        <td class="gold">40–120 mph</td>
+        <td>GL-10 design specification references cruise speeds up to 150 mph. Conservative range used here.</td>
+        <td>Moderate. Design spec, not demonstrated at full scale.</td>
+      </tr>
+      <tr>
+        <td>Sensor swath width range</td>
+        <td class="gold">0.5–5 mi</td>
+        <td>Comparable ISR UAS platforms (ScanEagle, Shadow). Actual swath depends on payload, altitude, and optics.</td>
+        <td>Moderate. Payload-dependent.</td>
+      </tr>
+      <tr>
+        <td>Crew per aircraft. Manual ops</td>
+        <td class="gold">6 people (2 shifts)</td>
+        <td>1 pilot + 1 payload operator per shift. 1 crew chief. Based on ScanEagle and Shadow RQ-7 operational models.</td>
+        <td>Moderate. Subject to FAA/DoD requirements.</td>
+      </tr>
+      <tr>
+        <td>Crew per aircraft. Semi-autonomous</td>
+        <td class="gold">4 people (2 shifts)</td>
+        <td>Safeguard handles geo-containment. 1 operator monitors 2 aircraft. Crew chief shared. Requires BVLOS waiver.</td>
+        <td>Low-Moderate. Regulatory approval required.</td>
+      </tr>
+      <tr>
+        <td>Crew per aircraft. Full autonomous</td>
+        <td class="gold">3 people (2 shifts)</td>
+        <td>Safeguard + xTM V&V. 1 operator manages up to 4 aircraft. Program maturity milestone. Not current state.</td>
+        <td>Low. Future milestone. Requires FAA approval and proven AI stack.</td>
+      </tr>
+      <tr>
+        <td>Fully-loaded labor cost / person</td>
+        <td class="gold">$60K–$180K / yr</td>
+        <td>GS-12 to GS-14 equivalent for cleared UAS operators. Private sector range for experienced ISR crew.</td>
+        <td>Moderate. Market-rate range.</td>
+      </tr>
+      <tr>
+        <td>Ravionics cost per flight hour</td>
+        <td class="gold">User-adjustable</td>
+        <td>No validated figure. Full-scale GL-10 not yet built. Planning assumption only.</td>
+        <td>None. Prototype validation required.</td>
+      </tr>
+      <tr>
+        <td>Geo-containment (Safeguard)</td>
+        <td class="ice">LAR-TOPS-244</td>
+        <td>NASA Langley. Formally verified algorithm. Enables BVLOS regulatory pathway. Software to be built separately.</td>
+        <td>High (algorithm). TBD (implementation).</td>
+      </tr>
+      <tr>
+        <td>Compliance audit (xTM V&V)</td>
+        <td class="ice">TOP2-320</td>
+        <td>NASA Ames. Flight-tested across thousands of operations. FAA xTM aligned. APIs defined.</td>
+        <td>High (framework). Implementation required.</td>
+      </tr>
+    </tbody>
+  </table>
+
+</div><!-- end results -->
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-left">
+    Sources: DHS OIG (2015), U.S. Congressional Budget Office, CBP statistics FY2025, Anduril press releases (2024),<br>
+    NASA Langley Technical Memoranda, NASA Ames TOP2-320. Strategic planning tool only. Not a procurement claim.
+  </div>
+  <div class="footer-brand">
+    RAVIONICS
+    <span>Persistence. Anywhere.</span>
+  </div>
+</div>
+
+</div><!-- end wrap -->
+
+<script>
+  // ── Constants ──────────────────────────────────────────────────
+  const MQ9_CPH      = 12000;
+  const MQ9_COVERAGE = 200;    // sq mi per 24-hr sortie
+  const MQ9_24H      = MQ9_CPH * 24;  // 288,000
+  const MQ9_CPSM     = MQ9_24H / MQ9_COVERAGE; // 1,440
+
+  // Autonomy levels: crew per aircraft (for 24-hr sustained ops, 2 shifts)
+  const AUTO_LEVELS = {
+    manual: { crew: 6, label: 'Manual Operations',        note: '<strong>Manual Operations (baseline):</strong> One pilot and one payload operator per shift. One crew chief. Full 24-hour sustained ops requires two shift rotations. Crew of 6 per aircraft. No additional FAA approval required beyond existing CBP UAS waivers.' },
+    semi:   { crew: 4, label: 'Semi-Autonomous (Safeguard active)', note: '<strong>Semi-Autonomous mode (Safeguard active):</strong> AI handles navigation and geo-containment. One operator monitors 2 aircraft simultaneously. Crew reduced from 6 to 4 per aircraft. Requires BVLOS waiver. Safeguard\'s formally verified boundary enforcement provides the FAA compliance foundation for that application. Software implementation to be built or procured separately.' },
+    full:   { crew: 3, label: 'Full Autonomous Patrol',    note: '<strong>Full Autonomous Patrol (Safeguard + xTM V&V):</strong> One operator manages up to 4 aircraft simultaneously. Crew effectively 3 per aircraft for sustained ops. Near-real time compliance auditing via xTM V&V satisfies FAA oversight requirements. This is a program maturity milestone. Requires demonstrated safety record and full BVLOS approval. Not current state.' }
+  };
+
+  let autoLevel = 'semi';
+
+  function setAuto(level) {
+    autoLevel = level;
+    document.querySelectorAll('.auto-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-level="${level}"]`).classList.add('active');
+    update();
+  }
+
+  // ── Slider helpers ──────────────────────────────────────────────
+  function pct(el) {
+    const min = parseFloat(el.min), max = parseFloat(el.max), val = parseFloat(el.value);
+    return ((val - min) / (max - min)) * 100;
+  }
+  function syncPct(el) { el.style.setProperty('--pct', pct(el) + '%'); }
+
+  const sliders = ['sl-cph','sl-units','sl-sorties','sl-speed','sl-swath','sl-labor'];
+  sliders.forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', () => { syncPct(el); update(); });
+    syncPct(el);
+  });
+
+  // ── Format helpers ──────────────────────────────────────────────
+  function fmtDollar(n) {
+    if (n >= 1e9)  return '$' + (n/1e9).toFixed(1) + 'B';
+    if (n >= 1e6)  return '$' + (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3)  return '$' + Math.round(n/1000) + 'K';
+    return '$' + Math.round(n).toLocaleString();
+  }
+  function fmtNum(n) {
+    if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return Math.round(n/1000) + 'K';
+    return Math.round(n).toLocaleString();
+  }
+  function pop(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.animation = 'none';
+    void el.offsetHeight;
+    el.style.animation = 'number-pop 0.3s ease';
+  }
+
+  // ── Main update ──────────────────────────────────────────────────
+  function update() {
+    const cph     = parseFloat(document.getElementById('sl-cph').value);
+    const units   = parseInt(document.getElementById('sl-units').value);
+    const sorties = parseInt(document.getElementById('sl-sorties').value);
+    const speed   = parseFloat(document.getElementById('sl-speed').value);
+    const swath   = parseFloat(document.getElementById('sl-swath').value);
+    const labor   = parseFloat(document.getElementById('sl-labor').value);
+    const crew    = AUTO_LEVELS[autoLevel].crew;
+
+    // ── Coverage math ──
+    // Coverage per unit per 24-hr mission = speed (mph) * swath (mi) * 24 (hrs)
+    const covPerUnit = speed * swath * 24;          // sq mi per unit per day
+    const covFleet   = covPerUnit * units;           // sq mi total per day
+    const covMonthly = covFleet * sorties;           // sq mi per month (fleet)
+
+    // ── Flight cost math ──
+    const flightPerUnit24  = cph * 24;              // per unit per sortie
+    const flightFleetMonthly = flightPerUnit24 * sorties * units; // fleet / month
+
+    // ── Crew cost math ──
+    // crew per aircraft for 24-hr ops (already accounts for 2 shifts)
+    const annualCrewPerUnit  = crew * labor;         // per unit per year
+    const monthlyCrewPerUnit = annualCrewPerUnit / 12;
+    const monthlyCrewFleet   = monthlyCrewPerUnit * units;
+    const annualCrewFleet    = annualCrewPerUnit * units;
+
+    // ── Total monthly cost ──
+    const totalMonthly = flightFleetMonthly + monthlyCrewFleet;
+
+    // ── Cost per sq mi (flight only, per sortie) ──
+    const cpsm = flightPerUnit24 / covPerUnit;
+
+    // ── Comparison metrics ──
+    const ratio   = MQ9_CPSM / cpsm;
+    // MQ-9 equivalent monthly flight cost at same number of sorties per unit
+    const mq9MonthlyEquiv = MQ9_24H * sorties * units;
+    const saving  = mq9MonthlyEquiv - flightFleetMonthly;
+
+    // ── Update slider display labels ──
+    document.getElementById('disp-cph').textContent    = '$' + cph.toLocaleString();
+    document.getElementById('disp-units').textContent  = units + (units === 1 ? ' unit' : ' units');
+    document.getElementById('disp-sorties').textContent = sorties + ' / mo';
+    document.getElementById('disp-speed').textContent  = speed + ' mph';
+    document.getElementById('disp-swath').textContent  = swath.toFixed(1) + ' mi';
+    document.getElementById('disp-labor').textContent  = '$' + (labor/1000).toFixed(0) + 'K';
+    document.getElementById('disp-crew').textContent   = crew + ' crew / aircraft';
+
+    // ── Big numbers ──
+    document.getElementById('bn-coverage').textContent  = fmtNum(covFleet);
+    document.getElementById('bn-cpsm').textContent      = '$' + cpsm.toFixed(0);
+    document.getElementById('bn-monthly').textContent   = fmtDollar(totalMonthly);
+    document.getElementById('bn-ratio').textContent     = Math.round(ratio) + 'x';
+
+    // ── Bar chart ──
+    const rvBarPct = Math.max(0.5, Math.min(97, (cpsm / MQ9_CPSM) * 100));
+    document.getElementById('bar-rv').style.width = rvBarPct + '%';
+    document.getElementById('bar-rv-label').textContent = '$' + cpsm.toFixed(0) + ' / sq mi';
+    document.getElementById('bar-rv-detail').textContent =
+      'Based on $' + cph.toLocaleString() + '/hr, ' + speed + ' mph patrol, ' + swath.toFixed(1) + '-mi swath, ' + units + ' unit(s). ' +
+      fmtNum(covFleet) + ' sq mi total coverage per day. Cost model to be validated at prototype stage.';
+
+    // ── Breakdown card ──
+    document.getElementById('rv-fleet-name').textContent = units + ' Unit' + (units > 1 ? 's' : '') + ' · ' + AUTO_LEVELS[autoLevel].label;
+    document.getElementById('rv-cph').textContent         = '$' + cph.toLocaleString();
+    document.getElementById('rv-24h').textContent         = fmtDollar(flightPerUnit24);
+    document.getElementById('rv-cov-unit').textContent    = fmtNum(covPerUnit) + ' sq mi';
+    document.getElementById('rv-cov-fleet').textContent   = fmtNum(covFleet) + ' sq mi';
+    document.getElementById('rv-crew').textContent        = crew + ' people';
+    document.getElementById('rv-crew-cost').textContent   = fmtDollar(annualCrewPerUnit) + ' / yr';
+    document.getElementById('rv-monthly-flight').textContent = fmtDollar(flightFleetMonthly);
+    document.getElementById('rv-monthly-crew').textContent   = fmtDollar(monthlyCrewFleet);
+    document.getElementById('rv-monthly-total').textContent  = fmtDollar(totalMonthly);
+    document.getElementById('rv-cpsm').textContent           = '$' + cpsm.toFixed(2);
+    document.getElementById('mq9-disadvantage').textContent  = '$' + MQ9_CPSM.toLocaleString() + ' vs. $' + cpsm.toFixed(0) + '/sq mi';
+
+    // ── Verdict ──
+    document.getElementById('v-ratio').textContent       = Math.round(ratio) + 'x';
+    document.getElementById('v-saving').textContent      = fmtDollar(Math.abs(saving));
+    document.getElementById('v-monthly-cov').textContent = fmtNum(covMonthly);
+    document.getElementById('v-annual-crew').textContent = fmtDollar(annualCrewFleet);
+
+    const callout = units + ' unit' + (units > 1 ? 's' : '') + ' at $' + cph.toLocaleString() + '/hr covers ' + fmtNum(covFleet) +
+      ' sq mi/day for ' + fmtDollar(flightPerUnit24 * units) + '. The MQ-9 covers ~200 sq mi for $288,000 per sortie.' +
+      (saving > 0 ? ' Monthly flight saving vs. MQ-9: ' + fmtDollar(saving) + '.' : ' At this rate, Ravionics flight cost exceeds MQ-9. Coverage advantage remains.');
+    document.getElementById('v-callout').textContent = callout;
+
+    // ── Autonomy note ──
+    document.getElementById('auto-note').innerHTML = AUTO_LEVELS[autoLevel].note;
+
+    // ── Pop key numbers ──
+    ['bn-coverage','bn-cpsm','bn-monthly','bn-ratio','v-ratio','v-saving'].forEach(pop);
+  }
+
+  // Init
+  update();
+</script>
+</body>
+</html>
