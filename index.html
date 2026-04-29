@@ -201,6 +201,9 @@ nav {
   gap: 36px;
   list-style: none;
 }
+.nav-links li {
+  position: relative;
+}
 .nav-links a {
   font-family: 'DM Mono', monospace;
   font-size: 11px;
@@ -221,6 +224,40 @@ nav {
 }
 .nav-links a:hover { color: var(--accent); }
 .nav-links a:hover::after { width: 100%; }
+
+.dropdown {
+  position: relative;
+}
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 0;
+  min-width: 210px;
+  background: #07090D;
+  border: 1px solid rgba(138,154,184,0.15);
+  border-top: 2px solid #C8922A;
+  list-style: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 600;
+}
+.dropdown:hover .dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+}
+.dropdown-menu a {
+  display: block;
+  padding: 12px 20px;
+  color: #8A9AB8;
+  white-space: nowrap;
+}
+.dropdown-menu a:hover {
+  color: #C8922A;
+}
+.dropdown-menu a::after {
+  display: none;
+}
 
 .nav-cta {
   font-family: 'DM Mono', monospace;
@@ -715,7 +752,7 @@ h2.section-title .acc-blue { color: var(--blue); }
 /* ══════════════════════════════════════════
    WHERE WE OPERATE (Applications equivalent)
 ══════════════════════════════════════════ */
-#where { background: var(--steel); }
+#markets { background: var(--steel); }
 
 .app-grid {
   display: grid;
@@ -1064,6 +1101,7 @@ footer {
   .nav-inner { padding: 16px 20px; }
   .nav-links { display: none; }
   .nav-cta { display: none; }
+  .mobile-menu .nav-cta { display: block; }
   .hamburger { display: flex; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); }
 
   #hero { padding: 110px 20px 60px; }
@@ -1109,15 +1147,22 @@ footer {
 <!-- NAV -->
 <nav>
   <div class="nav-inner">
-    <a href="#hero" class="nav-logo">RAVI<span>ONICS</span></a>
+    <a href="/#hero" class="nav-logo">RAVI<span>ONICS</span></a>
     <ul class="nav-links">
-      <li><a href="#about">About</a></li>
-      <li><a href="#platform">Platform</a></li>
-      <li><a href="#where">Where We Operate</a></li>
-      <li><a href="#gap">The Gap</a></li>
-      <li><a href="#contact">Contact</a></li>
+      <li><a href="/#about">About</a></li>
+      <li><a href="/#platform">Platform</a></li>
+      <li><a href="/#markets">Where We Operate</a></li>
+      <li><a href="/#gap">The Gap</a></li>
+      <li class="dropdown">
+        <a href="/ravionics-infographic.html">Resources</a>
+        <ul class="dropdown-menu">
+          <li><a href="/ravionics-infographic.html">GAP MAP</a></li>
+          <li><a href="/ravionics-cost-model.html">COVERAGE MODEL</a></li>
+        </ul>
+      </li>
+      <li><a href="/#contact">Contact</a></li>
     </ul>
-    <a href="#contact" class="nav-cta">Request a Briefing</a>
+    <a href="/#contact" class="nav-cta">Request a Briefing</a>
     <button class="hamburger" id="hamburger" aria-label="Open menu">
       <span></span><span></span><span></span>
     </button>
@@ -1126,12 +1171,14 @@ footer {
 
 <!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu">
-  <a href="#about" onclick="closeMobile()">About</a>
-  <a href="#platform" onclick="closeMobile()">Platform</a>
-  <a href="#where" onclick="closeMobile()">Where We Operate</a>
-  <a href="#gap" onclick="closeMobile()">The Gap</a>
-  <a href="#contact" onclick="closeMobile()">Contact</a>
-  <a href="#contact" class="nav-cta" onclick="closeMobile()">Request a Briefing</a>
+  <a href="/#about" onclick="closeMobile()">About</a>
+  <a href="/#platform" onclick="closeMobile()">Platform</a>
+  <a href="/#markets" onclick="closeMobile()">Where We Operate</a>
+  <a href="/#gap" onclick="closeMobile()">The Gap</a>
+  <a href="/ravionics-infographic.html" onclick="closeMobile()">GAP MAP</a>
+  <a href="/ravionics-cost-model.html" onclick="closeMobile()">COVERAGE MODEL</a>
+  <a href="/#contact" onclick="closeMobile()">Contact</a>
+  <a href="/#contact" class="nav-cta" onclick="closeMobile()">Request a Briefing</a>
 </div>
 
 <!-- HERO -->
@@ -1276,7 +1323,7 @@ footer {
 </section>
 
 <!-- WHERE WE OPERATE -->
-<section id="where" class="section">
+<section id="markets" class="section">
   <div class="section-inner">
     <div class="section-label reveal">Where We Operate</div>
     <h2 class="section-title reveal">EVERY CRITICAL<br>ASSET. <span class="acc">EVERYWHERE.</span></h2>
